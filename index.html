@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja" class="fs-m theme-light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>メモ</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="メモ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+
+<!-- ===== 主要ナビゲーション ===== -->
+<header id="nav">
+  <button class="nav-btn" data-nav="list">メモ一覧</button>
+  <button class="nav-btn" data-nav="write">＋書く</button>
+  <button class="nav-btn" data-nav="search">検索</button>
+  <button id="btn-settings" class="nav-icon" title="設定">⚙️</button>
+</header>
+
+<main id="main">
+
+  <!-- ===== メモ一覧 ===== -->
+  <section class="view" id="view-list">
+    <div class="subbar" data-normalbar>
+      <button id="btn-box" class="link">書き出し箱 (0)</button>
+      <button class="link sel-start" data-scope="list">選択</button>
+    </div>
+    <div class="subbar selbar" data-selbar hidden>
+      <button class="link sel-all">□ 全選択</button>
+      <span class="sel-count">0件</span>
+      <button class="link sel-move">移動</button>
+      <button class="link danger sel-del">削除</button>
+      <button class="link sel-cancel">やめる</button>
+    </div>
+    <div class="scroller" id="scroll-list">
+      <ul class="memolist" id="items-list"></ul>
+      <p class="empty" id="empty-list" hidden>メモはまだありません。<br>［＋書く］から始められます。</p>
+    </div>
+  </section>
+
+  <!-- ===== 検索（タグのみ） ===== -->
+  <section class="view" id="view-search">
+    <div class="subbar" data-normalbar>
+      <span class="subtitle">タグで検索</span>
+      <button id="btn-search-clear" class="link">選択解除</button>
+      <button class="link sel-start" data-scope="search">選択</button>
+    </div>
+    <div class="subbar selbar" data-selbar hidden>
+      <button class="link sel-all">□ 全選択</button>
+      <span class="sel-count">0件</span>
+      <button class="link sel-move">移動</button>
+      <button class="link danger sel-del">削除</button>
+      <button class="link sel-cancel">やめる</button>
+    </div>
+    <div class="scroller" id="scroll-search">
+      <div class="tagpool" id="search-tags"></div>
+      <p class="empty" id="empty-searchtags" hidden>使用したタグがまだありません。</p>
+      <div class="divline"></div>
+      <p class="hint" id="search-hint">タグを選ぶと、そのタグを含むメモを表示します。</p>
+      <ul class="memolist" id="items-search"></ul>
+      <p class="empty" id="empty-search" hidden>該当するメモはありません。</p>
+    </div>
+  </section>
+
+  <!-- ===== 書き出し箱 ===== -->
+  <section class="view" id="view-box">
+    <div class="subbar" data-normalbar>
+      <button class="link back" data-back="list">← メモ一覧</button>
+      <span class="subtitle" id="box-title">書き出し箱</span>
+      <button class="link sel-start" data-scope="box">選択</button>
+    </div>
+    <div class="subbar selbar" data-selbar hidden>
+      <button class="link sel-all">□ 全選択</button>
+      <span class="sel-count">0件</span>
+      <button class="link sel-back">元へ戻す</button>
+      <button class="link sel-cancel">やめる</button>
+    </div>
+    <div class="scroller" id="scroll-box">
+      <div class="rowbtns">
+        <button id="ex-txt">TXTで書き出し</button>
+        <button id="ex-md">Markdownで書き出し</button>
+        <button id="ex-pdf">PDFで書き出し</button>
+      </div>
+      <div class="rowbtns">
+        <button id="box-restore-all" class="sub">すべて元に戻す</button>
+      </div>
+      <ul class="memolist" id="items-box"></ul>
+      <p class="empty" id="empty-box" hidden>書き出し箱は空です。<br>メモ一覧で［選択］→［移動］で集められます。</p>
+    </div>
+  </section>
+
+  <!-- ===== 新規作成・編集 ===== -->
+  <section class="view" id="view-editor">
+    <div class="subbar">
+      <button class="link" id="ed-back">← 戻る</button>
+      <span class="subtitle" id="ed-where"></span>
+      <button class="link" id="ed-menu" title="メニュー">⋮</button>
+    </div>
+    <div class="scroller" id="scroll-editor">
+      <textarea id="ed-body" spellcheck="false" autocapitalize="off" placeholder="ここに貼り付け / 入力"></textarea>
+
+      <div class="block">
+        <div class="blocktitle">タグ <span class="muted" id="ed-tagcount">0 / 5</span></div>
+        <div class="chips" id="ed-chips"></div>
+        <div class="taginputrow">
+          <input id="ed-taginput" type="text" placeholder="タグ名" maxlength="40" autocapitalize="off" spellcheck="false">
+          <button id="ed-tagadd">追加</button>
+        </div>
+        <div class="tagpool small" id="ed-taghist"></div>
+      </div>
+
+      <div class="block">
+        <div class="blocktitle">画像 <span class="muted" id="ed-imgcount">0 / 2</span></div>
+        <div class="thumbs" id="ed-thumbs"></div>
+        <button id="ed-imgadd" class="sub">＋ 画像を追加</button>
+        <input type="file" id="ed-imgfile" accept="image/*" hidden>
+      </div>
+    </div>
+    <div class="bottombar" id="ed-bottom">
+      <button id="btn-divider">区切り線</button>
+      <button id="btn-save" class="primary">保存</button>
+    </div>
+    <div class="bottombar" id="ed-bottom-ro" hidden>
+      <button id="btn-restore" class="primary">復元</button>
+    </div>
+  </section>
+
+  <!-- ===== 設定 ===== -->
+  <section class="view" id="view-settings">
+    <div class="subbar">
+      <button class="link back" data-back="list">← メモ一覧</button>
+      <span class="subtitle">設定</span>
+      <span></span>
+    </div>
+    <div class="scroller" id="scroll-settings">
+      <div class="block">
+        <div class="blocktitle">文字サイズ</div>
+        <div class="segment" id="set-fs">
+          <button data-fs="s">小</button><button data-fs="m">中</button><button data-fs="l">大</button>
+        </div>
+      </div>
+      <div class="block">
+        <div class="blocktitle">テーマ</div>
+        <div class="segment" id="set-theme">
+          <button data-theme="light">ライト</button><button data-theme="dark">ダーク</button>
+        </div>
+      </div>
+      <div class="block" id="set-shortcut-block" hidden>
+        <div class="blocktitle">区切り線のショートカット（PC）</div>
+        <p class="hint" id="set-shortcut-now">未登録</p>
+        <div class="rowbtns">
+          <button id="set-shortcut-rec">キーを登録</button>
+          <button id="set-shortcut-clr" class="sub">解除</button>
+        </div>
+      </div>
+      <div class="block">
+        <div class="blocktitle">ゴミ箱</div>
+        <div class="rowbtns"><button id="set-trash">ゴミ箱を開く</button></div>
+      </div>
+      <div class="block">
+        <div class="blocktitle">バックアップ</div>
+        <div class="rowbtns"><button id="set-backup">全データをバックアップ</button></div>
+        <div class="rowbtns"><button id="set-restore">バックアップから復元</button></div>
+        <input type="file" id="set-restore-file" accept=".json,application/json" hidden>
+        <label class="switchrow"><input type="checkbox" id="set-bknotify"><span>バックアップ通知</span></label>
+        <p class="hint" id="set-bklast"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ゴミ箱 ===== -->
+  <section class="view" id="view-trash">
+    <div class="subbar">
+      <button class="link back" data-back="settings">← 設定</button>
+      <span class="subtitle">ゴミ箱</span>
+      <span></span>
+    </div>
+    <div class="scroller" id="scroll-trash">
+      <p class="hint">削除したメモは30日間保存され、その後自動的に消えます。</p>
+      <ul class="memolist" id="items-trash"></ul>
+      <p class="empty" id="empty-trash" hidden>ゴミ箱は空です。</p>
+    </div>
+  </section>
+
+</main>
+
+<!-- ===== 画像ビューア（閲覧専用） ===== -->
+<div id="viewer" hidden>
+  <img id="viewer-img" alt="">
+  <button id="viewer-close" title="閉じる">✕</button>
+</div>
+
+<!-- ===== 小さなトースト ===== -->
+<div id="toast" hidden></div>
+
+<!-- ===== 確認ダイアログ ===== -->
+<div id="dialog" hidden>
+  <div class="dlg">
+    <p id="dlg-text"></p>
+    <div class="dlg-btns" id="dlg-btns"></div>
+  </div>
+</div>
+
+<!-- ===== 操作シート ===== -->
+<div id="sheet" hidden>
+  <div class="sheet-inner">
+    <p class="sheet-title" id="sheet-title"></p>
+    <div id="sheet-btns"></div>
+  </div>
+</div>
+
+<!-- ===== 書き出し用（印刷→PDF） ===== -->
+<div id="printarea" aria-hidden="true"></div>
+
+<script src="js/util.js"></script>
+<script src="js/db.js"></script>
+<script src="js/state.js"></script>
+<script src="js/store.js"></script>
+<script src="js/images.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/backup.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
