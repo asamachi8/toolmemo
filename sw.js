@@ -2,7 +2,7 @@
    sw.js — オフライン用。アプリ本体だけをキャッシュする。
    ネットワーク通信はここ以外で行わない。
    =========================================================== */
-var CACHE = 'memotool-v1';
+var CACHE = 'memotool-v2';
 var FILES = [
   './',
   'index.html',
@@ -17,7 +17,8 @@ var FILES = [
   'js/app.js',
   'manifest.webmanifest',
   'icons/icon-192.png',
-  'icons/icon-512.png'
+  'icons/icon-512.png',
+  'icons/icon-512-maskable.png'
 ];
 
 self.addEventListener('install', function (e) {

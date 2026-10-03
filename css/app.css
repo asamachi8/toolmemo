@@ -322,6 +322,15 @@ button { cursor: pointer; }
 }
 .bottombar button.primary { flex: 1 1 auto; background: var(--accent); color: #fff; border-color: transparent; font-weight: 700; }
 
+/* 区切り線ボタンがオン（カーソルが線の上にある）＝ もう一度押すと消える */
+#btn-divider { min-width: 7.5em; }
+#btn-divider[aria-pressed="true"] {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: transparent;
+  font-weight: 700;
+}
+
 /* ---------- 設定 ---------- */
 .segment { display: flex; gap: 0; }
 .segment button {

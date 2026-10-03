@@ -477,6 +477,7 @@
       : (ed.loc === 'box' ? '書き出し箱のメモ' : '');
     renderTags();
     renderThumbs();
+    paintDividerBtn();
     autosize();
   }
 
@@ -579,31 +580,85 @@
   }
 
   /* ---------- 本文 ---------- */
-  ta.addEventListener('input', function () { autosize(); touchDraft(); });
+  ta.addEventListener('input', function () { autosize(); paintDividerBtn(); touchDraft(); });
   ta.addEventListener('scroll', function () { touchDraft(); });
-  ta.addEventListener('keyup', function () { touchDraft(); });
-  ta.addEventListener('click', function () { touchDraft(); });
+  ta.addEventListener('keyup', function () { paintDividerBtn(); touchDraft(); });
+  ta.addEventListener('click', function () { paintDividerBtn(); touchDraft(); });
   views.editor.scroll.addEventListener('scroll', function () { touchDraft(); }, { passive: true });
 
-  function insertDivider() {
-    if (ed.readonly) return;
-    var s = ta.selectionStart, e = ta.selectionEnd, v = ta.value;
-    var before = v.slice(0, s), after = v.slice(e);
-    // 区切り線は必ず1行として入る。続きは次の行から書ける。
-    var text = (before && !/\n$/.test(before) ? '\n' : '') + U.DIVIDER + '\n';
+  /* ---------- 区切り線（オン / オフ） ----------
+     ボタンは「いまカーソルがある場所が区切り線かどうか」を表す。
+       ＋ 区切り線（記入モード）… 押すとその位置へ区切り線を1本入れる
+       － 区切り線（線の上）    … 押すとその区切り線を消す
+     押すたびに増えることはなく、消すのも1回で済む。               */
+
+  function lineRange(v, pos) {
+    var s = v.lastIndexOf('\n', pos - 1) + 1;
+    var e = v.indexOf('\n', pos);
+    return [s, e < 0 ? v.length : e];
+  }
+
+  // カーソル行が区切り線ならその範囲。行頭にいて直前の行が区切り線ならその範囲。
+  function dividerAt(v, pos) {
+    var r = lineRange(v, pos);
+    if (v.slice(r[0], r[1]) === U.DIVIDER) return r;
+    if (pos === r[0] && r[0] > 0) {
+      var p = lineRange(v, r[0] - 1);
+      if (v.slice(p[0], p[1]) === U.DIVIDER) return p;
+    }
+    return null;
+  }
+
+  // 標準の取り消し（Undo）を壊さないよう execCommand 経由で書き換える
+  function replaceRange(start, end, text) {
     ta.focus();
+    ta.setSelectionRange(start, end);
     var ok = false;
-    try { ok = document.execCommand('insertText', false, text); } catch (err) { ok = false; }
+    try {
+      ok = text ? document.execCommand('insertText', false, text)
+                : document.execCommand('delete');
+    } catch (err) { ok = false; }
     if (!ok) {
-      ta.value = before + text + after;
-      var pos = before.length + text.length;
+      var v = ta.value;
+      ta.value = v.slice(0, start) + text + v.slice(end);
+      var pos = start + text.length;
       ta.setSelectionRange(pos, pos);
     }
+  }
+
+  function toggleDivider() {
+    if (ed.readonly) return;
+    var v = ta.value;
+    var hit = dividerAt(v, ta.selectionStart);
+    if (hit) {
+      // 線を外して記入モードへ戻す（行と改行1つ分だけ取り除く）
+      var start = hit[0], end = hit[1];
+      if (end < v.length) end += 1;
+      else if (start > 0) start -= 1;
+      replaceRange(start, end, '');
+    } else {
+      var s = ta.selectionStart, e = ta.selectionEnd;
+      var before = v.slice(0, s);
+      replaceRange(s, e, (before && !/\n$/.test(before) ? '\n' : '') + U.DIVIDER + '\n');
+    }
     autosize();
+    paintDividerBtn();
     touchDraft();
   }
 
-  $('#btn-divider').addEventListener('click', insertDivider);
+  function paintDividerBtn() {
+    var b = $('#btn-divider');
+    var on = ed.open && !ed.readonly && dividerAt(ta.value, ta.selectionStart) !== null;
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.textContent = on ? '－ 区切り線' : '＋ 区切り線';
+  }
+
+  $('#btn-divider').addEventListener('click', toggleDivider);
+
+  // カーソルが動いたらボタンの表示を合わせる
+  document.addEventListener('selectionchange', function () {
+    if (ed.open && document.activeElement === ta) paintDividerBtn();
+  });
   $('#btn-save').addEventListener('click', function () { commitEditor('explicit'); });
   $('#ed-back').addEventListener('click', function () { closeEditor(ed.returnTo); });
   $('#btn-restore').addEventListener('click', function () {
@@ -622,7 +677,7 @@
     if (e.key.toLowerCase() !== k.key) return;
     if (!!k.ctrl !== e.ctrlKey || !!k.shift !== e.shiftKey || !!k.alt !== e.altKey || !!k.meta !== e.metaKey) return;
     e.preventDefault();
-    insertDivider();
+    toggleDivider();
   });
 
   /* ---------- タグ入力 ---------- */
