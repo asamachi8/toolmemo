@@ -31,9 +31,6 @@
   var DAY = 86400000;
 
   /* ---------- 本文ユーティリティ ---------- */
-  // 区切り線は「本文上の純粋な区切り表現」(仕様 5.1)。別オブジェクトにはしない。
-  var DIVIDER = '━━━━━━━━';
-
   function isBlank(s) { return !s || s.replace(/[\s　]+/g, '') === ''; }
 
   // 一覧プレビュー: 本文の先頭2行（先頭の空行は読み飛ばす）
@@ -180,19 +177,12 @@
     });
   }
 
-  /* ---------- 環境判定 ---------- */
-  // PC（細かいポインタがある環境）のみ区切り線ショートカット設定を見せる (仕様 5.3)
-  var isDesktop = (function () {
-    try { return window.matchMedia('(any-pointer: fine)').matches; } catch (e) { return true; }
-  })();
-
   global.U = {
     $: $, $$: $$,
     newId: newId,
     fmtDateTime: fmtDateTime,
     fmtFileStamp: fmtFileStamp,
     DAY: DAY,
-    DIVIDER: DIVIDER,
     isBlank: isBlank,
     previewOf: previewOf,
     toast: toast,
@@ -200,7 +190,6 @@
     sheet: sheet,
     attachPress: attachPress,
     downloadBlob: downloadBlob,
-    readFileText: readFileText,
-    isDesktop: isDesktop
+    readFileText: readFileText
   };
 })(window);

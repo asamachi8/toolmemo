@@ -123,7 +123,6 @@
       </div>
     </div>
     <div class="bottombar" id="ed-bottom">
-      <button id="btn-divider" aria-pressed="false">＋ 区切り線</button>
       <button id="btn-save" class="primary">保存</button>
     </div>
     <div class="bottombar" id="ed-bottom-ro" hidden>
@@ -151,14 +150,6 @@
           <button data-theme="light">ライト</button><button data-theme="dark">ダーク</button>
         </div>
       </div>
-      <div class="block" id="set-shortcut-block" hidden>
-        <div class="blocktitle">区切り線のショートカット（PC）</div>
-        <p class="hint" id="set-shortcut-now">未登録</p>
-        <div class="rowbtns">
-          <button id="set-shortcut-rec">キーを登録</button>
-          <button id="set-shortcut-clr" class="sub">解除</button>
-        </div>
-      </div>
       <div class="block">
         <div class="blocktitle">ゴミ箱</div>
         <div class="rowbtns"><button id="set-trash">ゴミ箱を開く</button></div>
@@ -183,6 +174,9 @@
     </div>
     <div class="scroller" id="scroll-trash">
       <p class="hint">削除したメモは30日間保存され、その後自動的に消えます。</p>
+      <div class="rowbtns" id="trash-actions" hidden>
+        <button id="trash-empty" class="danger">すべて完全に削除</button>
+      </div>
       <ul class="memolist" id="items-trash"></ul>
       <p class="empty" id="empty-trash" hidden>ゴミ箱は空です。</p>
     </div>

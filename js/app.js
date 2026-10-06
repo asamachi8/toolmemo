@@ -168,6 +168,7 @@
       shown[scope] = end;
     }
     if (v.empty) v.empty.hidden = arr.length > 0;
+    if (scope === 'trash') $('#trash-actions').hidden = arr.length === 0;
     if (scope === 'search') {
       $('#search-hint').hidden = S.session.searchTags.length > 0;
       $('#empty-search').hidden = !(S.session.searchTags.length > 0 && arr.length === 0);
@@ -477,7 +478,6 @@
       : (ed.loc === 'box' ? '書き出し箱のメモ' : '');
     renderTags();
     renderThumbs();
-    paintDividerBtn();
     autosize();
   }
 
@@ -580,85 +580,12 @@
   }
 
   /* ---------- 本文 ---------- */
-  ta.addEventListener('input', function () { autosize(); paintDividerBtn(); touchDraft(); });
+  ta.addEventListener('input', function () { autosize(); touchDraft(); });
   ta.addEventListener('scroll', function () { touchDraft(); });
-  ta.addEventListener('keyup', function () { paintDividerBtn(); touchDraft(); });
-  ta.addEventListener('click', function () { paintDividerBtn(); touchDraft(); });
+  ta.addEventListener('keyup', function () { touchDraft(); });
+  ta.addEventListener('click', function () { touchDraft(); });
   views.editor.scroll.addEventListener('scroll', function () { touchDraft(); }, { passive: true });
 
-  /* ---------- 区切り線（オン / オフ） ----------
-     ボタンは「いまカーソルがある場所が区切り線かどうか」を表す。
-       ＋ 区切り線（記入モード）… 押すとその位置へ区切り線を1本入れる
-       － 区切り線（線の上）    … 押すとその区切り線を消す
-     押すたびに増えることはなく、消すのも1回で済む。               */
-
-  function lineRange(v, pos) {
-    var s = v.lastIndexOf('\n', pos - 1) + 1;
-    var e = v.indexOf('\n', pos);
-    return [s, e < 0 ? v.length : e];
-  }
-
-  // カーソル行が区切り線ならその範囲。行頭にいて直前の行が区切り線ならその範囲。
-  function dividerAt(v, pos) {
-    var r = lineRange(v, pos);
-    if (v.slice(r[0], r[1]) === U.DIVIDER) return r;
-    if (pos === r[0] && r[0] > 0) {
-      var p = lineRange(v, r[0] - 1);
-      if (v.slice(p[0], p[1]) === U.DIVIDER) return p;
-    }
-    return null;
-  }
-
-  // 標準の取り消し（Undo）を壊さないよう execCommand 経由で書き換える
-  function replaceRange(start, end, text) {
-    ta.focus();
-    ta.setSelectionRange(start, end);
-    var ok = false;
-    try {
-      ok = text ? document.execCommand('insertText', false, text)
-                : document.execCommand('delete');
-    } catch (err) { ok = false; }
-    if (!ok) {
-      var v = ta.value;
-      ta.value = v.slice(0, start) + text + v.slice(end);
-      var pos = start + text.length;
-      ta.setSelectionRange(pos, pos);
-    }
-  }
-
-  function toggleDivider() {
-    if (ed.readonly) return;
-    var v = ta.value;
-    var hit = dividerAt(v, ta.selectionStart);
-    if (hit) {
-      // 線を外して記入モードへ戻す（行と改行1つ分だけ取り除く）
-      var start = hit[0], end = hit[1];
-      if (end < v.length) end += 1;
-      else if (start > 0) start -= 1;
-      replaceRange(start, end, '');
-    } else {
-      var s = ta.selectionStart, e = ta.selectionEnd;
-      var before = v.slice(0, s);
-      replaceRange(s, e, (before && !/\n$/.test(before) ? '\n' : '') + U.DIVIDER + '\n');
-    }
-    autosize();
-    paintDividerBtn();
-    touchDraft();
-  }
-
-  function paintDividerBtn() {
-    var b = $('#btn-divider');
-    var on = ed.open && !ed.readonly && dividerAt(ta.value, ta.selectionStart) !== null;
-    b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.textContent = on ? '－ 区切り線' : '＋ 区切り線';
-  }
-
-  $('#btn-divider').addEventListener('click', toggleDivider);
-
-  // カーソルが動いたらボタンの表示を合わせる
-  document.addEventListener('selectionchange', function () {
-    if (ed.open && document.activeElement === ta) paintDividerBtn();
-  });
   $('#btn-save').addEventListener('click', function () { commitEditor('explicit'); });
   $('#ed-back').addEventListener('click', function () { closeEditor(ed.returnTo); });
   $('#btn-restore').addEventListener('click', function () {
@@ -668,16 +595,6 @@
       ed.open = false;
       return Promise.all([loadList('trash'), loadList('list')]);
     }).then(function () { setView('trash'); });
-  });
-
-  // PC: 自分で登録したショートカットで区切り線を挿入
-  ta.addEventListener('keydown', function (e) {
-    var k = S.settings.dividerKey;
-    if (!k || !U.isDesktop) return;
-    if (e.key.toLowerCase() !== k.key) return;
-    if (!!k.ctrl !== e.ctrlKey || !!k.shift !== e.shiftKey || !!k.alt !== e.altKey || !!k.meta !== e.metaKey) return;
-    e.preventDefault();
-    toggleDivider();
   });
 
   /* ---------- タグ入力 ---------- */
@@ -925,9 +842,6 @@
     $$('#set-theme button').forEach(function (b) {
       b.setAttribute('aria-pressed', b.dataset.theme === S.settings.theme ? 'true' : 'false');
     });
-    $('#set-shortcut-block').hidden = !U.isDesktop;
-    var k = S.settings.dividerKey;
-    $('#set-shortcut-now').textContent = k ? '現在: ' + k.label : '未登録';
     $('#set-bknotify').checked = !!S.settings.backupNotify;
     $('#set-bklast').textContent = S.backup.lastBackupAt
       ? '最後のバックアップ: ' + U.fmtDateTime(S.backup.lastBackupAt)
@@ -948,36 +862,21 @@
     });
   });
 
-  // 区切り線ショートカットの登録（初期ショートカットなし）
-  var recording = false;
-  $('#set-shortcut-rec').addEventListener('click', function () {
-    recording = true;
-    $('#set-shortcut-now').textContent = '希望のキー操作を押してください…';
+  /* ---------- ゴミ箱を空にする（完全削除・取り消せない） ---------- */
+  $('#trash-empty').addEventListener('click', function () {
+    var ids = data.trash.map(function (m) { return m.id; });
+    if (!ids.length) return;
+    U.confirmDialog('ゴミ箱の' + ids.length + '件を完全に削除します。元に戻せません。', [
+      { label: '完全に削除', value: 'ok', cls: 'danger' },
+      { label: 'キャンセル', value: null }
+    ]).then(function (r) {
+      if (r !== 'ok') return;
+      Store.hardDelete(ids).then(function () {
+        U.toast('✓ 完全に削除しました');
+        return loadList('trash');
+      });
+    });
   });
-  $('#set-shortcut-clr').addEventListener('click', function () {
-    S.settings.dividerKey = null;
-    S.saveSettings(); paintSettings();
-  });
-  window.addEventListener('keydown', function (e) {
-    if (!recording) return;
-    e.preventDefault();
-    if (e.key === 'Escape') { recording = false; paintSettings(); return; }
-    if (['Control', 'Shift', 'Alt', 'Meta'].indexOf(e.key) >= 0) return;
-    var parts = [];
-    if (e.ctrlKey) parts.push('Ctrl');
-    if (e.altKey) parts.push('Alt');
-    if (e.shiftKey) parts.push('Shift');
-    if (e.metaKey) parts.push('Meta');
-    parts.push(e.key.length === 1 ? e.key.toUpperCase() : e.key);
-    S.settings.dividerKey = {
-      key: e.key.toLowerCase(),
-      ctrl: e.ctrlKey, shift: e.shiftKey, alt: e.altKey, meta: e.metaKey,
-      label: parts.join(' + ')
-    };
-    S.saveSettings();
-    recording = false;
-    paintSettings();
-  }, true);
 
   $('#set-trash').addEventListener('click', function () {
     Store.purgeExpired().then(function () { return loadList('trash'); }).then(function () { setView('trash'); });

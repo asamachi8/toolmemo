@@ -28,7 +28,6 @@
   var defaults = {
     fontSize: 'm',       // s | m | l （初期値 中）
     theme: 'light',      // light | dark（手動切替のみ）
-    dividerKey: null,    // PC用ショートカット {key, ctrl, shift, alt, meta, label}
     backupNotify: true   // 初期値 ON
   };
 
