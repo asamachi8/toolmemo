@@ -55,7 +55,8 @@ button, input, textarea {
   color: inherit;
 }
 
-button { cursor: pointer; }
+/* タップ待ちの遅延を出さない（1タップで即反応させる） */
+button { cursor: pointer; touch-action: manipulation; }
 
 /* ---------- ナビゲーション（上部固定） ---------- */
 #nav {
@@ -146,6 +147,10 @@ button { cursor: pointer; }
   gap: 10px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 .memolist li.selected { background: var(--panel); }
 
@@ -256,6 +261,14 @@ button { cursor: pointer; }
   font-size: var(--fs-small);
 }
 
+.poolhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px 0;
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
 .tagpool { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
 .tagpool.small { padding: 10px 0 0; }
 .tagpool .tagbtn {
@@ -339,6 +352,48 @@ button { cursor: pointer; }
 
 .switchrow { display: flex; align-items: center; gap: 10px; padding: 10px 0 2px; font-size: var(--fs-small); }
 .switchrow input { width: 20px; height: 20px; }
+
+/* ---------- 使い方 ---------- */
+/* ふだんは閉じておき、タップでひらく。文字サイズの設定にそのまま従う。 */
+.howto { padding: 0; }
+.howto > summary {
+  list-style: none;
+  padding: 14px 12px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.howto > summary::-webkit-details-marker { display: none; }
+.howto > summary::after { content: '  ▼'; font-weight: 400; color: var(--muted); }
+.howto[open] > summary::after { content: '  ▲'; }
+.howto[open] > summary { border-bottom: 1px solid var(--line); }
+
+.howto h4 {
+  margin: 18px 0 8px;
+  padding: 6px 12px 6px 10px;
+  border-left: 4px solid var(--accent);
+  font-size: var(--fs);
+  background: var(--panel);
+}
+.howto p { margin: 8px 12px; line-height: 1.9; }
+.howto ol, .howto ul { margin: 8px 0 12px; padding-left: 34px; line-height: 1.9; }
+.howto li { margin-bottom: 6px; }
+.howto ol { list-style: decimal; }
+.howto ul { list-style: disc; }
+.howto > *:last-child { margin-bottom: 16px; }
+
+/* 本物のボタンと見くらべられるように、名前を小さなボタンの形で見せる */
+.howto .k {
+  display: inline-block;
+  padding: 1px 7px;
+  margin: 0 1px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  font-weight: 700;
+  white-space: nowrap;
+}
 
 /* ---------- 画像ビューア ---------- */
 #viewer {

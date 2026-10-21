@@ -59,6 +59,10 @@
       <button class="link sel-cancel">やめる</button>
     </div>
     <div class="scroller" id="scroll-search">
+      <div class="poolhead">
+        <span>タグ</span>
+        <button id="btn-search-refresh" class="link">↻ 更新</button>
+      </div>
       <div class="tagpool" id="search-tags"></div>
       <p class="empty" id="empty-searchtags" hidden>使用したタグがまだありません。</p>
       <div class="divline"></div>
@@ -79,6 +83,7 @@
       <button class="link sel-all">□ 全選択</button>
       <span class="sel-count">0件</span>
       <button class="link sel-back">元へ戻す</button>
+      <button class="link danger sel-del">削除</button>
       <button class="link sel-cancel">やめる</button>
     </div>
     <div class="scroller" id="scroll-box">
@@ -138,6 +143,100 @@
       <span></span>
     </div>
     <div class="scroller" id="scroll-settings">
+
+      <!-- 使い方（ふだんは閉じておき、タップでひらく） -->
+      <details class="block howto">
+        <summary>使い方をみる</summary>
+
+        <h4>メモを書く</h4>
+        <ol>
+          <li>上の <b class="k">＋書く</b> をおします。</li>
+          <li>白いところに、文を書くか、コピーした文をはりつけます。</li>
+          <li>下の青い <b class="k">保存</b> をおします。</li>
+        </ol>
+        <p>「✓ 保存しました」と出たら、ちゃんと保存できています。<br>
+        おしわすれても、ほかの画面にうつるときに自動で保存されます。</p>
+
+        <h4>書いたメモを見る・なおす</h4>
+        <p>上の <b class="k">メモ一覧</b> で、見たいメモをタップするとひらきます。<br>
+        なおしたら、また <b class="k">保存</b> をおします。</p>
+        <p>書きなおしたのをやめて、前にもどしたいときは、
+        右上の <b class="k">⋮</b> →  <b class="k">変更を破棄</b>。</p>
+
+        <h4>タグをつける</h4>
+        <p>タグは、メモにつける「しるし」です。あとでさがすときに使います。</p>
+        <ol>
+          <li>メモをひらいて「タグ」のところに名前を書きます。</li>
+          <li><b class="k">追加</b> をおすと <b>#名前</b> がつきます。</li>
+        </ol>
+        <ul>
+          <li>1つのメモに <b>5こまで</b> つけられます。</li>
+          <li>前に使ったタグは下にならぶので、タップするだけでつけられます。</li>
+          <li>タグを<b>長おし</b>すると、名前を変えたり、ならびから消したりできます。</li>
+        </ul>
+
+        <h4>メモをさがす</h4>
+        <ol>
+          <li>上の <b class="k">検索</b> をおします。</li>
+          <li>タグをタップすると、そのタグがついたメモだけが出ます。</li>
+        </ol>
+        <ul>
+          <li>タグを2つ以上えらぶと、<b>どれか1つでもついているメモ</b>が全部出ます。</li>
+          <li>新しいメモが出てこないときは <b class="k">↻ 更新</b> をおします。</li>
+          <li>さがせるのは<b>タグだけ</b>です。文のなかみではさがせません。</li>
+        </ul>
+
+        <h4>画像をつける</h4>
+        <ul>
+          <li>メモの下のほうにある <b class="k">＋ 画像を追加</b> からえらびます。</li>
+          <li>1つのメモに <b>2まいまで</b>。</li>
+          <li>小さい画像をタップすると、大きく見られます。指を広げると拡大できます。</li>
+          <li>けすときは、画像の右上の <b class="k">✕</b>。</li>
+        </ul>
+
+        <h4>まとめてファイルにする（書き出し箱）</h4>
+        <p>あとでファイルにしたいメモを、いったん集めておく場所です。</p>
+        <ol>
+          <li><b class="k">メモ一覧</b> で <b class="k">選択</b> をおします。</li>
+          <li>入れたいメモをタップしてえらびます。</li>
+          <li><b class="k">移動</b> をおすと、書き出し箱に入ります。</li>
+          <li><b class="k">書き出し箱</b> をひらいて、
+              <b class="k">TXT</b> / <b class="k">Markdown</b> / <b class="k">PDF</b>
+              のどれかをおすとファイルになります。</li>
+        </ol>
+        <ul>
+          <li>ファイルにしても、箱の中は空になりません。3しゅるい続けて出せます。</li>
+          <li>もどしたいときは <b class="k">すべて元に戻す</b>。
+              1つだけなら <b class="k">選択</b> → <b class="k">元へ戻す</b>。</li>
+          <li>PDFのときだけ、「PDFとして保存」の画面が出ます。</li>
+        </ul>
+
+        <h4>まちがえて消したとき（ゴミ箱）</h4>
+        <ul>
+          <li>消したメモは <b class="k">ゴミ箱を開く</b> の中にあります。</li>
+          <li><b>30日のあいだ</b>は <b class="k">復元</b> でもどせます。</li>
+          <li>30日すぎると、ひとりでに消えます。</li>
+          <li><b class="k">すべて完全に削除</b> をおすと今すぐ全部消えます。
+              <b>これはもどせません。</b></li>
+        </ul>
+
+        <h4>バックアップ（いちばん大事）</h4>
+        <p>メモは、この端末の中だけにあります。
+        ほかの場所には送られていません。</p>
+        <ul>
+          <li>スマホを買いかえる前、ブラウザのデータを消す前には、かならず
+              <b class="k">全データをバックアップ</b> をおしてファイルを作ってください。</li>
+          <li>保存する場所をきかれるので、すきなところをえらびます。</li>
+          <li>もどすときは <b class="k">バックアップから復元</b>。
+              <b>今あるメモは全部、そのファイルの中身に入れかわります。</b></li>
+          <li>月に1回くらいやっておくと安心です。</li>
+        </ul>
+
+        <h4>見やすくする</h4>
+        <p>このページの下にある <b class="k">小</b> <b class="k">中</b> <b class="k">大</b>
+        で文字の大きさを、<b class="k">ライト</b> <b class="k">ダーク</b> で画面の色を変えられます。</p>
+      </details>
+
       <div class="block">
         <div class="blocktitle">文字サイズ</div>
         <div class="segment" id="set-fs">

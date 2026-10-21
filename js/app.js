@@ -514,28 +514,6 @@
     });
   }
 
-  function openEditorFromDraft(d) {
-    leaveEditorState();
-    ed.open = true;
-    ed.id = d.id || null;
-    ed.loc = d.loc || 'normal';
-    ed.readonly = false;
-    ed.tags = (d.tags || []).slice(0, 5);
-    ed.imgs = (d.imgs || []).slice(0, 2);
-    ed.baseSig = d.baseSig || '';
-    ed.returnTo = d.returnTo || 'list';
-    ta.value = d.body || '';
-    setView('editor', d.scroll || 0);
-    paintEditor();
-    if (d.sel) {
-      try { ta.setSelectionRange(d.sel[0], d.sel[1]); } catch (e) { /* noop */ }
-    }
-    // 高さ確定後にもう一度スクロール位置を合わせる
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { views.editor.scroll.scrollTop = d.scroll || 0; });
-    });
-  }
-
   function leaveEditorState() {
     ed.open = false;
     S.clearDraft();
@@ -573,6 +551,8 @@
       // 新規作成・実際に更新した場合のみ、対象が見える先頭へ。それ以外は元の位置。
       var top = focusTop ? 0 : undefined;
       focusTop = false;
+      // 編集でタグが増えている場合があるので、検索画面のタグも読み直す
+      if (target === 'search') renderSearchTags();
       return Promise.all([loadList(target), refreshBoxCount()]).then(function () {
         setView(target, top);
       });
@@ -781,6 +761,12 @@
     loadList('search');
   });
 
+  // タグ一覧と検索結果を読み直す
+  $('#btn-search-refresh').addEventListener('click', function () {
+    renderSearchTags();
+    loadList('search').then(function () { U.toast('✓ 更新しました'); });
+  });
+
   /* ===========================================================
      書き出し箱
      =========================================================== */
@@ -883,11 +869,44 @@
   });
 
   $('#set-backup').addEventListener('click', function () {
-    Backup.save().then(function () {
+    runBackup();
+  });
+
+  /* ---------- バックアップ（保存先を選べる） ---------- */
+  function runBackup() {
+    U.toast('バックアップを作成中…');
+    Backup.build().then(function (item) {
+      var opts = [];
+      if (Backup.canPickFolder()) opts.push({ label: '保存先を選んで保存', value: 'pick' });
+      opts.push({ label: 'この端末に保存', value: 'device' });
+      if (Backup.canSendToApp(item)) {
+        opts.push({ label: '他のアプリへ送る（Googleドライブなど）', value: 'app' });
+      }
+      opts.push({ label: 'キャンセル', value: null });
+
+      // 選べる保存先が1つしかないときは、そのまま保存する
+      if (opts.length === 2) return finishBackup(Backup.toThisDevice(item));
+
+      return U.sheet('バックアップの保存先', opts).then(function (r) {
+        if (!r) return;
+        if (r === 'pick') return finishBackup(Backup.pickFolder(item));
+        if (r === 'app') return finishBackup(Backup.sendToApp(item));
+        return finishBackup(Backup.toThisDevice(item));
+      });
+    }).catch(function () { U.toast('バックアップに失敗しました'); });
+  }
+
+  function finishBackup(p) {
+    return p.then(function () {
+      Backup.markSaved();
       U.toast('✓ バックアップしました');
       paintSettings();
-    }).catch(function () { U.toast('バックアップに失敗しました'); });
-  });
+    }).catch(function (err) {
+      // 保存先の選択をやめた場合は、失敗扱いにしない
+      if (err && (err.name === 'AbortError' || err.name === 'NotAllowedError')) return;
+      U.toast('バックアップに失敗しました');
+    });
+  }
 
   $('#set-restore').addEventListener('click', function () { $('#set-restore-file').click(); });
   $('#set-restore-file').addEventListener('change', function (e) {
@@ -936,7 +955,7 @@
       { label: 'あとで', value: 'later' }
     ]).then(function (r) {
       if (r === 'go') {
-        Backup.save().then(function () { U.toast('✓ バックアップしました'); paintSettings(); });
+        runBackup();
       } else {
         S.backup.snoozeUntil = Date.now() + 30 * U.DAY;   // 次の30日間は再通知しない
         S.saveBackupMeta();
@@ -967,6 +986,25 @@
   /* ===========================================================
      起動
      =========================================================== */
+
+  // 起動時はメモ一覧から始めるが、前回の書きかけは捨てない。
+  // 異常終了やOS終了で編集画面のまま終わっていた場合、その内容を正式保存する。
+  function rescueDraft(d) {
+    if (!d) return Promise.resolve();
+    S.clearDraft();
+    var body = d.body || '';
+    var tags = (d.tags || []).slice(0, 5);
+    var imgs = (d.imgs || []).slice(0, 2);
+    if (!d.id && U.isBlank(body) && !tags.length && !imgs.length) return Promise.resolve();
+    return Store.save({ id: d.id, body: body, tags: tags, imgs: imgs, baseSig: d.baseSig })
+      .then(function (res) {
+        if (res && (res.created || res.changed)) {
+          setTimeout(function () { U.toast('✓ 書きかけを保存しました'); }, 400);
+        }
+      })
+      .catch(function () { /* 保存できなくても起動は続ける */ });
+  }
+
   function boot() {
     S.applyAppearance();
     paintSettings();
@@ -978,24 +1016,15 @@
         var d = S.readDraft();
         return Store.collectGarbageImages(d ? (d.imgs || []) : []).then(function () { return d; });
       })
-      .then(function (d) {
-        return Promise.all([loadList('list'), loadList('box'), refreshBoxCount()]).then(function () { return d; });
+      // 書きかけが残っていれば、開く前に正式保存して失わないようにする
+      .then(function (d) { return rescueDraft(d); })
+      .then(function () {
+        return Promise.all([loadList('list'), loadList('box'), refreshBoxCount()]);
       })
-      .then(function (d) {
-        if (d) {
-          // 異常終了・OS終了からの復帰：直前の入力状態へ戻す
-          openEditorFromDraft(d);
-          return;
-        }
-        var v = S.session.view || 'list';
-        if (v === 'editor' || !views[v]) v = 'list';
-        var pre = (v === 'search') ? loadList('search')
-          : (v === 'trash') ? loadList('trash')
-          : Promise.resolve();
-        return pre.then(function () {
-          setView(v);
-          setTimeout(maybeNotifyBackup, 600);
-        });
+      .then(function () {
+        // 起動時はいつもメモ一覧から始める
+        setView('list');
+        setTimeout(maybeNotifyBackup, 600);
       })
       .catch(function (err) {
         console.error(err);

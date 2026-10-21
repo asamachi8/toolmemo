@@ -128,28 +128,38 @@
       if (!longFired && !moved && ok && onTap) onTap();
     }
 
-    el.addEventListener('touchstart', function (e) {
-      start(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
-    el.addEventListener('touchmove', function (e) {
-      move(e.touches[0].clientX, e.touches[0].clientY);
-    }, { passive: true });
-    el.addEventListener('touchend', function (e) {
-      if (longFired) e.preventDefault();
-      end(true);
-    });
-    el.addEventListener('touchcancel', function () { end(false); });
+    // Pointer Events だけを使う。
+    // touch と mouse の両方を監視すると、1回のタップで onTap が2回走り
+    // （タッチ後にブラウザが擬似マウスイベントを送るため）、
+    // 選択の切り替えが「入って即座に外れる」＝反応しないように見える。
+    var activeId = null;
+    var lastType = 'mouse';
 
-    // マウス（PC）: 右クリックも長押し相当として扱う
-    el.addEventListener('mousedown', function (e) {
-      if (e.button !== 0) return;
+    el.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;          // 右クリック等は contextmenu で扱う
+      lastType = e.pointerType || 'mouse';
+      activeId = e.pointerId;
       start(e.clientX, e.clientY);
     });
-    el.addEventListener('mousemove', function (e) { if (timer) move(e.clientX, e.clientY); });
-    el.addEventListener('mouseup', function () { end(true); });
-    el.addEventListener('mouseleave', function () { end(false); });
+    el.addEventListener('pointermove', function (e) {
+      if (activeId !== e.pointerId) return;
+      move(e.clientX, e.clientY);
+    }, { passive: true });
+    el.addEventListener('pointerup', function (e) {
+      if (activeId !== e.pointerId) return;
+      activeId = null;
+      end(true);
+    });
+    el.addEventListener('pointercancel', function (e) {
+      if (activeId !== e.pointerId) return;
+      activeId = null;
+      end(false);                           // スクロール開始などはタップにしない
+    });
+
+    // PC: 右クリックを長押し相当として扱う（タッチの長押しは上のタイマーが担当）
     el.addEventListener('contextmenu', function (e) {
       e.preventDefault();
+      if (lastType !== 'mouse' || longFired) return;
       if (timer) { clearTimeout(timer); timer = null; }
       if (onLong) onLong();
     });

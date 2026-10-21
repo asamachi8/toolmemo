@@ -63,15 +63,58 @@
     });
   }
 
-  function save() {
+  /* ---------- 保存先 ----------
+     端末に保存するか、他のアプリ（Googleドライブ等）へ渡すかを選べるようにする。
+     使える手段は端末によって違うので、実際に使えるものだけを出す。          */
+
+  // 書き出すファイルを先に作っておく（保存先の選択はこのあと）
+  function build() {
     return create().then(function (data) {
+      var name = 'IdeaMemo_Backup_' + U.fmtFileStamp(Date.now()) + '.json';
       var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      U.downloadBlob(blob, 'IdeaMemo_Backup_' + U.fmtFileStamp(Date.now()) + '.json');
-      S.backup.lastBackupAt = Date.now();
-      S.backup.snoozeUntil = 0;
-      S.saveBackupMeta();
-      return true;
+      var file = null;
+      try { file = new File([blob], name, { type: 'application/json' }); } catch (e) { file = null; }
+      return { name: name, blob: blob, file: file };
     });
+  }
+
+  // 保存先フォルダを選んで保存できるか（PCのChrome / Edge など）
+  function canPickFolder() {
+    return typeof window.showSaveFilePicker === 'function';
+  }
+
+  // 他のアプリへ渡せるか（スマートフォンの共有メニュー）
+  function canSendToApp(item) {
+    try {
+      return !!(item.file && navigator.canShare && navigator.canShare({ files: [item.file] }));
+    } catch (e) { return false; }
+  }
+
+  function pickFolder(item) {
+    return window.showSaveFilePicker({
+      suggestedName: item.name,
+      types: [{ description: 'メモのバックアップ', accept: { 'application/json': ['.json'] } }]
+    }).then(function (handle) {
+      return handle.createWritable().then(function (w) {
+        return Promise.resolve(w.write(item.blob)).then(function () { return w.close(); });
+      });
+    });
+  }
+
+  function sendToApp(item) {
+    return navigator.share({ files: [item.file], title: item.name });
+  }
+
+  function toThisDevice(item) {
+    U.downloadBlob(item.blob, item.name);
+    return Promise.resolve();
+  }
+
+  // 保存できたことを記録する（通知の30日カウントもここで戻す）
+  function markSaved() {
+    S.backup.lastBackupAt = Date.now();
+    S.backup.snoozeUntil = 0;
+    S.saveBackupMeta();
   }
 
   // 完全置換（マージしない）
@@ -106,5 +149,14 @@
     });
   }
 
-  global.Backup = { save: save, restore: restore };
+  global.Backup = {
+    build: build,
+    canPickFolder: canPickFolder,
+    canSendToApp: canSendToApp,
+    pickFolder: pickFolder,
+    sendToApp: sendToApp,
+    toThisDevice: toThisDevice,
+    markSaved: markSaved,
+    restore: restore
+  };
 })(window);
