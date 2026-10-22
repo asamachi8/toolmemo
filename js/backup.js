@@ -64,30 +64,21 @@
   }
 
   /* ---------- 保存先 ----------
-     端末に保存するか、他のアプリ（Googleドライブ等）へ渡すかを選べるようにする。
-     使える手段は端末によって違うので、実際に使えるものだけを出す。          */
+     保存先を選べる端末では、置き場所を指定して保存する。
+     その画面から他のアプリ（Googleドライブ等）の場所も選べる。          */
 
   // 書き出すファイルを先に作っておく（保存先の選択はこのあと）
   function build() {
     return create().then(function (data) {
       var name = 'IdeaMemo_Backup_' + U.fmtFileStamp(Date.now()) + '.json';
       var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-      var file = null;
-      try { file = new File([blob], name, { type: 'application/json' }); } catch (e) { file = null; }
-      return { name: name, blob: blob, file: file };
+      return { name: name, blob: blob };
     });
   }
 
-  // 保存先フォルダを選んで保存できるか（PCのChrome / Edge など）
+  // 保存先を選んで保存できるか（対応している端末のみ）
   function canPickFolder() {
     return typeof window.showSaveFilePicker === 'function';
-  }
-
-  // 他のアプリへ渡せるか（スマートフォンの共有メニュー）
-  function canSendToApp(item) {
-    try {
-      return !!(item.file && navigator.canShare && navigator.canShare({ files: [item.file] }));
-    } catch (e) { return false; }
   }
 
   function pickFolder(item) {
@@ -99,10 +90,6 @@
         return Promise.resolve(w.write(item.blob)).then(function () { return w.close(); });
       });
     });
-  }
-
-  function sendToApp(item) {
-    return navigator.share({ files: [item.file], title: item.name });
   }
 
   function toThisDevice(item) {
@@ -152,9 +139,7 @@
   global.Backup = {
     build: build,
     canPickFolder: canPickFolder,
-    canSendToApp: canSendToApp,
     pickFolder: pickFolder,
-    sendToApp: sendToApp,
     toThisDevice: toThisDevice,
     markSaved: markSaved,
     restore: restore

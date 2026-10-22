@@ -876,21 +876,16 @@
   function runBackup() {
     U.toast('バックアップを作成中…');
     Backup.build().then(function (item) {
-      var opts = [];
-      if (Backup.canPickFolder()) opts.push({ label: '保存先を選んで保存', value: 'pick' });
-      opts.push({ label: 'この端末に保存', value: 'device' });
-      if (Backup.canSendToApp(item)) {
-        opts.push({ label: '他のアプリへ送る（Googleドライブなど）', value: 'app' });
-      }
-      opts.push({ label: 'キャンセル', value: null });
+      // 保存先を選べない端末では、そのまま端末に保存する
+      if (!Backup.canPickFolder()) return finishBackup(Backup.toThisDevice(item));
 
-      // 選べる保存先が1つしかないときは、そのまま保存する
-      if (opts.length === 2) return finishBackup(Backup.toThisDevice(item));
-
-      return U.sheet('バックアップの保存先', opts).then(function (r) {
+      return U.sheet('バックアップの保存先', [
+        { label: '保存先を選んで保存', value: 'pick' },
+        { label: 'この端末に保存', value: 'device' },
+        { label: 'キャンセル', value: null }
+      ]).then(function (r) {
         if (!r) return;
         if (r === 'pick') return finishBackup(Backup.pickFolder(item));
-        if (r === 'app') return finishBackup(Backup.sendToApp(item));
         return finishBackup(Backup.toThisDevice(item));
       });
     }).catch(function () { U.toast('バックアップに失敗しました'); });
